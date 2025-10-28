@@ -1,0 +1,271 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UseCase {
+  wireframes
+  hifi
+}
+
+enum ScreenType {
+  desktop
+  mobile
+  tablet
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELLED
+  SUSPENDED
+  EXPIRED
+  PENDING
+}
+
+enum SubscriptionPlan {
+  FREE
+  STANDARD
+  PRO
+  ENTERPRISE
+}
+
+enum BillingCycle {
+  MONTHLY
+  YEARLY
+}
+
+enum PaymentStatus {
+  COMPLETED
+  PENDING
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+model Account {
+  id                       String  @id @default(cuid())
+  userId                   String
+  type                     String
+  provider                 String
+  providerAccountId        String
+  refresh_token            String? @db.Text
+  refresh_token_expires_in Int?
+  access_token             String? @db.Text
+  expires_at               Int?
+  token_type               String?
+  scope                    String?
+  id_token                 String? @db.Text
+  session_state            String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id                    String         @id @default(cuid())
+  name                  String?
+  email                 String?        @unique
+  emailVerified         DateTime?
+  image                 String?
+  
+  // Subscription fields
+  currentPlan           SubscriptionPlan @default(FREE)
+  creditsUsed           Int            @default(0)
+  creditsTotal          Int            @default(90) // Free plan credits
+  
+  accounts              Account[]
+  sessions              Session[]
+  subscriptions         Subscription[]
+  designGroups          DesignGroup[]
+  designs               Design[]
+  
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+}
+
+model Subscription {
+  id                    String             @id @default(cuid())
+  userId                String
+  user                  User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // DodoPayments subscription details
+  dodopaymentsSubscriptionId  String             @unique
+  dodopaymentsPlanId          String
+  
+  // Subscription details
+  plan                  SubscriptionPlan
+  status                SubscriptionStatus @default(PENDING)
+  billingCycle          BillingCycle
+  
+  // Pricing
+  amount                Decimal            @db.Decimal(10,2)
+  currency              String             @default("USD")
+  
+  // Dates
+  startDate             DateTime           @default(now())
+  endDate               DateTime?
+  nextBillingDate       DateTime?
+  cancelledAt           DateTime?
+  
+  // Credits allocation
+  creditsIncluded       Int                // Credits included in this plan
+  
+  // Metadata
+  metadata              Json?              // Store additional DodoPayments data
+  
+  payments              Payment[]
+  
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  
+  @@index([userId])
+  @@index([dodopaymentsSubscriptionId])
+  @@index([status])
+}
+
+model Payment {
+  id                    String        @id @default(cuid())
+  subscriptionId        String
+  subscription          Subscription  @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  
+  // DodoPayments payment details
+  dodopaymentsPaymentId       String        @unique
+  dodopaymentsTransactionId   String?
+  
+  // Payment details
+  amount                Decimal       @db.Decimal(10,2)
+  currency              String        @default("USD")
+  status                PaymentStatus @default(PENDING)
+  
+  // Dates
+  paymentDate           DateTime?
+  
+  // Metadata
+  metadata              Json?         // Store additional DodoPayments payment data
+  failureReason         String?
+  
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  
+  @@index([subscriptionId])
+  @@index([dodopaymentsPaymentId])
+  @@index([status])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model DesignGroup {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  designs     Design[]
+  
+  @@index([userId])
+}
+
+model Design {
+  id             String         @id @default(cuid())
+  
+  name           String         @default("")
+  tags           Json           @default("[]")
+  previewUrl     String?
+  version        Int            @default(1)
+
+  html           String         @db.Text
+  css            String         @db.Text
+  elements       Json
+  prompt         String
+  promptHistory  Json           @default("[]")
+  position       Json
+  size           Json
+  useCase        UseCase
+  screenType     ScreenType
+  deepDesign     Boolean
+  autoflow       Boolean
+  
+  // Credits tracking
+  creditsUsed    Int            @default(6) // Default credits per design
+  
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  
+  userId         String
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  groupId        String?
+  group          DesignGroup?   @relation(fields: [groupId], references: [id])
+  versions       DesignVersion[]
+
+  @@index([userId, groupId])
+  @@index([userId, createdAt])
+}
+
+model DesignVersion {
+  id        String   @id @default(cuid())
+  designId  String
+  version   Int
+  designJson Json
+  createdAt DateTime @default(now())
+  design    Design  @relation(fields: [designId], references: [id], onDelete: Cascade)
+
+  @@index([designId, version])
+}
+
+// Model to track credit usage and history
+model CreditUsage {
+  id          String   @id @default(cuid())
+  userId      String
+  
+  // Usage details
+  creditsUsed Int
+  action      String   // 'design_created', 'export_figma', 'export_code', etc.
+  resourceId  String?  // ID of the design/resource that consumed credits
+  description String?
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([userId, createdAt])
+}
+
+// Model to track feature usage limits
+model FeatureUsage {
+  id           String   @id @default(cuid())
+  userId       String
+  
+  // Current month usage (resets monthly)
+  designFiles  Int      @default(0)  // Number of design files created
+  screenFlows  Int      @default(0)  // Number of screen flows created
+  figmaExports Int      @default(0)  // Number of Figma exports
+  codeExports  Int      @default(0)  // Number of code exports
+  
+  // Period tracking
+  monthYear    String   // Format: "2024-01" for January 2024
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  @@unique([userId, monthYear])
+  @@index([userId])
+}
