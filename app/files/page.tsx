@@ -61,16 +61,20 @@ export default function FilesPage() {
     try {
       setLoading(true)
       
-      // Fetch groups
-      const groupsRes = await fetch('/api/groups')
+      const controller = new AbortController()
+      const { signal } = controller
+
+      const designsQuery = selectedGroup !== 'all' ? `?group=${selectedGroup}` : ''
+      const [groupsRes, designsRes] = await Promise.all([
+        fetch('/api/groups', { signal }),
+        fetch(`/api/designs${designsQuery}`, { signal })
+      ])
+
       if (groupsRes.ok) {
         const groupsData = await groupsRes.json()
         setGroups(groupsData.groups || [])
       }
 
-      // Fetch designs
-      const designsQuery = selectedGroup !== 'all' ? `?group=${selectedGroup}` : ''
-      const designsRes = await fetch(`/api/designs${designsQuery}`)
       if (designsRes.ok) {
         const designsData = await designsRes.json()
         setDesigns(designsData.designs || [])

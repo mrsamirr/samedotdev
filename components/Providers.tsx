@@ -9,7 +9,7 @@ import { Toaster } from "@/lib/ui/toaster";
 
 export const Providers = ({ children }: { children: React.ReactNode }) => {
   return (
-    <SessionProvider>
+    <SessionProvider refetchOnWindowFocus={false} refetchInterval={0} refetchWhenOffline={false}>
       <RecoilRoot>{children}</RecoilRoot>
       <Toaster />
     </SessionProvider>

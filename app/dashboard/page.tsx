@@ -52,36 +52,35 @@ export default function DashboardPage() {
     try {
       setLoading(true)
       
-      // Fetch user subscription status (includes stats)
-      const statsRes = await fetch('/api/user/subscription-status')
+      const controller = new AbortController()
+      const { signal } = controller
+
+      const [statsRes, designsRes, groupsRes] = await Promise.all([
+        fetch('/api/user/subscription-status', { signal }),
+        fetch('/api/designs?limit=6', { signal }),
+        fetch('/api/groups', { signal })
+      ])
+
       if (statsRes.ok) {
         const data = await statsRes.json()
         setStats({
-          totalDesigns: 0, // Will be calculated from designs
-          totalGroups: 0,  // Will be calculated from groups
+          totalDesigns: 0,
+          totalGroups: 0,
           creditsUsed: data.user.creditsUsed,
           creditsTotal: data.user.creditsTotal,
           recentActivity: data.recentActivity || []
         })
       }
 
-      // Fetch recent designs
-      const designsRes = await fetch('/api/designs?limit=6')
       if (designsRes.ok) {
         const designsData = await designsRes.json()
         setRecentDesigns(designsData.designs || [])
-        
-        // Update stats with actual counts
-        if (stats) {
-          setStats(prev => prev ? {
-            ...prev,
-            totalDesigns: designsData.designs?.length || 0
-          } : null)
-        }
+        setStats(prev => prev ? {
+          ...prev,
+          totalDesigns: designsData.designs?.length || 0
+        } : null)
       }
 
-      // Fetch groups count
-      const groupsRes = await fetch('/api/groups')
       if (groupsRes.ok) {
         const groupsData = await groupsRes.json()
         setStats(prev => prev ? {

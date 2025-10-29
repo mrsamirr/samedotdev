@@ -220,6 +220,7 @@ model Design {
 
   @@index([userId, groupId])
   @@index([userId, createdAt])
+  @@index([userId, updatedAt])
 }
 
 model DesignVersion {

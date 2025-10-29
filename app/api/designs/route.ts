@@ -18,11 +18,12 @@ export async function GET(request: NextRequest) {
 		const groupId = url.searchParams.get('group') || undefined
 		const limitParam = url.searchParams.get('limit')
 		const limit = limitParam ? parseInt(limitParam, 10) : undefined
+		const take = Math.min(Number.isFinite(limit as number) ? (limit as number) : 100, 200)
 		
 		const designs = await prisma.design.findMany({
 			where: { userId, ...(groupId ? { groupId } : {}) },
 			orderBy: { updatedAt: 'desc' },
-			...(limit ? { take: limit } : {}),
+			take,
 			include: {
 				group: {
 					select: {
@@ -32,7 +33,10 @@ export async function GET(request: NextRequest) {
 				}
 			}
 		})
-		return NextResponse.json({ designs })
+		return NextResponse.json(
+			{ designs },
+			{ headers: { 'Cache-Control': 'private, max-age=15, stale-while-revalidate=60' } }
+		)
 	} catch (error) {
 		console.error('GET /api/designs error', error)
 		return NextResponse.json({ error: 'Failed to fetch designs' }, { status: 500 })

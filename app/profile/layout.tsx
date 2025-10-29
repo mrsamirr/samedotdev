@@ -1,8 +1,19 @@
 "use client";
+import dynamic from "next/dynamic";
 
-import { Appbar } from "@/components/Appbar";
-import ProfileChildren from "@/components/ProfileChildren";
-import ProfileSidebar from "@/components/ProfileSidebar";
+const Appbar = dynamic(
+  () => import("@/components/Appbar").then(m => m.Appbar),
+  { ssr: false, loading: () => null }
+);
+
+const ProfileChildren = dynamic(
+  () => import("@/components/ProfileChildren"),
+  { ssr: false, loading: () => null }
+);
+const ProfileSidebar = dynamic(
+  () => import("@/components/ProfileSidebar"),
+  { ssr: false, loading: () => null }
+);
 import React, { JSX, useState } from "react";
 
 export default function ProfileLayout({ children }: { children: React.ReactNode }): JSX.Element {

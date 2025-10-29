@@ -21,7 +21,10 @@ export async function GET() {
 			}
 		}
 	})
-	return NextResponse.json({ groups })
+	return NextResponse.json(
+		{ groups },
+		{ headers: { 'Cache-Control': 'private, max-age=30, stale-while-revalidate=120' } }
+	)
 	} catch (error) {
 		console.error('GET /api/groups error', error)
 		return NextResponse.json({ error: 'Failed to fetch groups' }, { status: 500 })

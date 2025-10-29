@@ -1,10 +1,11 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Navbar } from "@/components/Navbar";
-import { Footer } from "@/components/Footer";
+const Navbar = dynamic(() => import("@/components/Navbar").then(m => m.Navbar), { ssr: false });
+const Footer = dynamic(() => import("@/components/Footer").then(m => m.Footer), { ssr: false });
 import { Coins } from "lucide-react";
 
 // DodoPayments credit packs - matching the plans page

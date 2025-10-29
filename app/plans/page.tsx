@@ -1,14 +1,15 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check } from "lucide-react";
 import { useState } from "react";
-import { Navbar } from "@/components/Navbar";
-import { FAQSection } from "@/components/faq-section";
-import { Footer } from "@/components/Footer";
-import DodoPaymentsButton from "@/components/DodoPaymentsButton";
+const Navbar = dynamic(() => import("@/components/Navbar").then(m => m.Navbar), { ssr: false });
+const FAQSection = dynamic(() => import("@/components/faq-section").then(m => m.FAQSection), { ssr: false });
+const Footer = dynamic(() => import("@/components/Footer").then(m => m.Footer), { ssr: false });
+const DodoPaymentsButton = dynamic(() => import("@/components/DodoPaymentsButton"), { ssr: false });
 
 const DODOPAYMENTS_PLAN_IDS = {
   standard_monthly:

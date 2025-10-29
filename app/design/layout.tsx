@@ -1,5 +1,11 @@
-import { AppbarAtPlayGround } from "@/components/AppbarAtPlayGround";
+"use client";
+import dynamic from "next/dynamic";
 
+const AppbarAtPlayGround = dynamic(
+  () => import("@/components/AppbarAtPlayGround").then(m => m.AppbarAtPlayGround),
+  { ssr: false, loading: () => null }
+);
+                                                                                                                                                            
 
 
 

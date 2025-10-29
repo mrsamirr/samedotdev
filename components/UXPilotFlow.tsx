@@ -174,28 +174,37 @@ const UXPilotFlowContent: React.FC = () => {
     };
   };
 
-  // Load groups and designs on mount / group change
+  // Load groups and designs on mount / group change (parallelized)
   useEffect(() => {
     (async () => {
       try {
-        // load groups first if not loaded
-        if (!groups.length) {
-          const gr = await fetch("/api/groups", { cache: "no-store" });
-          if (gr.ok) {
-            const data = await gr.json();
-            setGroups(data.groups || []);
-            // Use query param if present, else first group
-            const qp = searchParams?.get("group");
-            if (qp) setActiveGroupId(qp);
-            else if (!activeGroupId && data.groups?.[0])
-              setActiveGroupId(data.groups[0].id);
+        const qp = searchParams?.get("group");
+        const resolvedGroupId = qp ?? activeGroupId;
+
+        const designsQuery = resolvedGroupId ? `?group=${resolvedGroupId}&limit=100` : `?limit=100`;
+
+        const fetchGroups = groups.length
+          ? null
+          : fetch("/api/groups");
+        const fetchDesigns = fetch(`/api/designs${designsQuery}`);
+
+        const [groupsRes, designsRes] = await Promise.all([
+          fetchGroups,
+          fetchDesigns,
+        ]);
+
+        if (groupsRes && groupsRes.ok) {
+          const data = await groupsRes.json();
+          setGroups(data.groups || []);
+          if (qp) {
+            setActiveGroupId(qp);
+          } else if (!activeGroupId && data.groups?.[0]) {
+            setActiveGroupId(data.groups[0].id);
           }
         }
 
-        const q = activeGroupId ? `?group=${activeGroupId}` : "";
-        const res = await fetch(`/api/designs${q}`, { cache: "no-store" });
-        if (res.ok) {
-          const data = await res.json();
+        if (designsRes.ok) {
+          const data = await designsRes.json();
           const fetched: DbDesign[] = data.designs || [];
           const repositionedDesigns = fetched.map(
             (design: DbDesign, index: number) => ({
@@ -224,7 +233,7 @@ const UXPilotFlowContent: React.FC = () => {
       if (savedExpanded) setExpandedNodes(new Set(JSON.parse(savedExpanded)));
       setTimeout(() => fitView(fitViewOptions), 300);
     })();
-  }, [fitView, activeGroupId, searchParams]);
+  }, [fitView, activeGroupId, searchParams, groups.length]);
 
   // Update nodes and persist expanded state only
   useEffect(() => {

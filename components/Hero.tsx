@@ -151,7 +151,7 @@ export default function Hero() {
             <span className="font-bold bg-gradient-to-b from-blue-400 to-blue-700 bg-clip-text text-transparent">
               Ux
             </span>{" "}
-            Designer.
+            Craft.
           </h1>
         </div>
         <p className="text-primary/80 max-w-lg text-center tracking-tight md:text-lg font-light">

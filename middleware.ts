@@ -18,7 +18,6 @@ export default withAuth(
       "/profile",
       "/files",
       "/review",
-      "/share",
     ];
 
     // Check if the current path is a protected route
@@ -57,7 +56,6 @@ export default withAuth(
           "/profile",
           "/files",
           "/review",
-          "/share",
         ];
 
         // Check if the current path is a protected route
