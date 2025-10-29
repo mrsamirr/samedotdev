@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-// import { Mistral } from '@mistralai/mistralai'
 import Anthropic from "@anthropic-ai/sdk";
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
