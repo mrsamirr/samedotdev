@@ -10,6 +10,9 @@ import {
   Sparkles,
   Download,
   Copy,
+  Eye,
+  X,
+  Loader2,
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -36,6 +39,12 @@ import {
 import "@xyflow/react/dist/style.css";
 import { DesignNode } from "./RawDesign";
 import { Sidebar } from "./Sidebar";
+import { Button } from "./ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog";
+import { Textarea } from "./ui/textarea";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { Toast } from "@/lib/ui/toast";
 
 const UXPilotFlowContent: React.FC = () => {
   const [designs, setDesigns] = useState<GeneratedDesign[]>([]);
@@ -712,7 +721,7 @@ const UXPilotFlowContent: React.FC = () => {
       // no-op UI update
     } catch (e) {
       console.error(e);
-      alert("Save failed");
+      toast.error("Save failed", "Please try again");
     }
   }
 
@@ -880,11 +889,10 @@ const UXPilotFlowContent: React.FC = () => {
 
         <div className="flex items-center gap-3">
           <div className="hidden md:flex items-center gap-3 mr-4">
-            <select
-              className="px-4 py-2 bg-white/70 backdrop-blur-sm border border-gray-200/60 rounded-md shadow-sm text-sm font-medium hover:bg-white/90 transition-all"
+            <Select
               value={activeGroupId ?? ""}
-              onChange={(e) => {
-                const id = e.target.value || null;
+              onValueChange={(value) => {
+                const id = value || null;
                 setActiveGroupId(id);
                 const url = new URL(window.location.href);
                 if (id) url.searchParams.set("group", id);
@@ -892,15 +900,22 @@ const UXPilotFlowContent: React.FC = () => {
                 window.history.replaceState(null, "", url.toString());
               }}
             >
-              <option value="">All Files</option>
-              {groups.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.name}
-                </option>
-              ))}
-            </select>
-            <button
-              className="px-4 py-2 bg-white/70 backdrop-blur-sm border border-gray-200/60 rounded-md shadow-sm text-sm font-medium hover:bg-white/90 transition-all"
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="All Files" />
+              </SelectTrigger>
+              <SelectContent>
+             
+                <SelectItem value="__all__">All Files</SelectItem>
+                {groups.map((g) => (
+                  <SelectItem key={g.id} value={g.id}>
+                    {g.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            <Button
+              variant="outline"
               onClick={async () => {
                 const name = prompt("New file name")?.trim();
                 if (!name) return;
@@ -920,25 +935,37 @@ const UXPilotFlowContent: React.FC = () => {
               }}
             >
               + New File
-            </button>
+            </Button>
           </div>
-          <button
-            onClick={() => fitView(fitViewOptions)}
-            className="px-4 py-2 bg-white/70 backdrop-blur-sm border border-gray-200/60 rounded-md shadow-sm hover:shadow-md transition-all text-sm font-medium hover:bg-white/90 flex items-center gap-2"
-            title="Fit to View"
-          >
-            <Maximize2 size={16} />
-            Fit View
-          </button>
-          <button
-            onClick={clearAll}
-            className="px-4 py-2 bg-white/70 backdrop-blur-sm border border-red-200/60 rounded-md shadow-sm hover:shadow-md text-red-600 hover:bg-red-50/80 transition-all text-sm font-medium flex items-center gap-2"
-            title="Clear All"
-            disabled={designs.length === 0}
-          >
-            <Trash2 size={16} />
-            Clear All
-          </button>
+          
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fitView(fitViewOptions)}
+                >
+                  <Maximize2 size={16} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Fit to View</TooltipContent>
+            </Tooltip>
+            
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={clearAll}
+                  disabled={designs.length === 0}
+                >
+                  <Trash2 size={16} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Clear All</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </div>
 
@@ -998,13 +1025,14 @@ const UXPilotFlowContent: React.FC = () => {
               <br />
               Create wireframes and pixel-perfect mockups in seconds.
             </p>
-            <button
+            <Button
               onClick={() => setSidebarOpen(true)}
-              className="px-10 py-5 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500 text-white rounded-2xl font-bold hover:from-blue-700 hover:via-purple-700 hover:to-pink-600 transition-all duration-300 shadow-xl hover:shadow-2xl pointer-events-auto transform hover:scale-105 flex items-center gap-3 mx-auto"
+              size="lg"
+              className="pointer-events-auto px-10 py-6 text-lg shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all"
             >
               <Sparkles size={20} />
-              <span>Start Creating Magic</span>
-            </button>
+              Start Creating Magic
+            </Button>
           </div>
         </div>
       )}
@@ -1020,146 +1048,175 @@ const UXPilotFlowContent: React.FC = () => {
               transform: "translateX(-50%) translateY(-100%)",
             }}
           >
-            <div className="bg-white/95 backdrop-blur-xl border border-gray-200/50 rounded-lg shadow-xl">
-              <div className="flex items-center divide-x divide-gray-200/60">
+            <div className="bg-background border rounded-lg shadow-lg">
+              <div className="flex items-center divide-x divide-border">
                 {/* Update Design */}
-                <button
-                  className="flex items-center justify-center px-3 py-2 hover:bg-gray-50/80 transition-all text-gray-700 hover:text-gray-900 rounded-l-lg"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const d = designs.find(
-                      (dd) => dd.id === contextMenu.designId
-                    );
-                    if (d) {
-                      setFollowUp({ design: d, prompt: "" });
-                    }
-                    closeContextMenu();
-                  }}
-                  title="Update Design"
-                >
-                  <Sparkles size={16} />
-                </button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        className="flex items-center justify-center px-3 py-2 hover:bg-accent transition-colors rounded-l-lg"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const d = designs.find(
+                            (dd) => dd.id === contextMenu.designId
+                          );
+                          if (d) {
+                            setFollowUp({ design: d, prompt: "" });
+                          }
+                          closeContextMenu();
+                        }}
+                      >
+                        <Sparkles size={16} />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>Update Design</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
 
-                <button
-                  className="flex items-center justify-center px-3 py-2 hover:bg-gray-50/80 transition-all text-gray-700 hover:text-gray-900"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const d = designs.find(
-                      (dd) => dd.id === contextMenu.designId
-                    );
-                    if (d) {
-                      downloadHtmlFile(d);
-                    }
-                    closeContextMenu();
-                  }}
-                  title="Export HTML"
-                >
-                  <Download size={16} />
-                </button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        className="flex items-center justify-center px-3 py-2 hover:bg-accent transition-colors"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const d = designs.find(
+                            (dd) => dd.id === contextMenu.designId
+                          );
+                          if (d) {
+                            downloadHtmlFile(d);
+                          }
+                          closeContextMenu();
+                        }}
+                      >
+                        <Download size={16} />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>Export HTML</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
 
                 {/* View Code */}
-                <button
-                  className="flex items-center justify-center px-3 py-2 hover:bg-gray-50/80 transition-all text-gray-700 hover:text-gray-900"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const d = designs.find(
-                      (dd) => dd.id === contextMenu.designId
-                    );
-                    if (d) {
-                      openSourceSidebar(d);
-                    }
-                    closeContextMenu();
-                  }}
-                  title="View Code"
-                >
-                  <Code2 size={16} />
-                </button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        className="flex items-center justify-center px-3 py-2 hover:bg-accent transition-colors"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const d = designs.find(
+                            (dd) => dd.id === contextMenu.designId
+                          );
+                          if (d) {
+                            openSourceSidebar(d);
+                          }
+                          closeContextMenu();
+                        }}
+                      >
+                        <Code2 size={16} />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>View Code</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
 
                 {/* Preview */}
-                <button
-                  className="flex items-center justify-center px-3 py-2 hover:bg-gray-50/80 transition-all text-gray-700 hover:text-gray-900"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const d = designs.find(
-                      (dd) => dd.id === contextMenu.designId
-                    );
-                    if (d) {
-                      openPreviewInNewTab(d);
-                    }
-                    closeContextMenu();
-                  }}
-                  title="Preview"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-                    <circle cx="12" cy="12" r="3" />
-                  </svg>
-                </button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        className="flex items-center justify-center px-3 py-2 hover:bg-accent transition-colors"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const d = designs.find(
+                            (dd) => dd.id === contextMenu.designId
+                          );
+                          if (d) {
+                            openPreviewInNewTab(d);
+                          }
+                          closeContextMenu();
+                        }}
+                      >
+                        <Eye size={16} />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>Preview</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
 
                 {/* History */}
-                <button
-                  className="flex items-center justify-center px-3 py-2 hover:bg-gray-50/80 transition-all text-gray-700 hover:text-gray-900"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    openHistory(contextMenu.designId);
-                    closeContextMenu();
-                  }}
-                  title="History"
-                >
-                  <History size={16} />
-                </button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        className="flex items-center justify-center px-3 py-2 hover:bg-accent transition-colors"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          openHistory(contextMenu.designId);
+                          closeContextMenu();
+                        }}
+                      >
+                        <History size={16} />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>History</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
 
                 {/* Share Link */}
-                <button
-                  className="flex items-center justify-center px-3 py-2 hover:bg-gray-50/80 transition-all text-gray-700 hover:text-gray-900"
-                  onClick={async (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const d = designs.find(
-                      (dd) => dd.id === contextMenu.designId
-                    );
-                    if (d) {
-                      await shareLink(d);
-                    }
-                    closeContextMenu();
-                  }}
-                  title="Share Link"
-                >
-                  <Share2 size={16} />
-                </button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        className="flex items-center justify-center px-3 py-2 hover:bg-accent transition-colors"
+                        onClick={async (e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          const d = designs.find(
+                            (dd) => dd.id === contextMenu.designId
+                          );
+                          if (d) {
+                            await shareLink(d);
+                          }
+                          closeContextMenu();
+                        }}
+                      >
+                        <Share2 size={16} />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>Share Link</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
 
                 {/* Delete */}
-                <button
-                  className="flex items-center justify-center px-3 py-2 hover:bg-red-50/80 transition-all text-gray-700 hover:text-red-600 rounded-r-lg"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    if (
-                      confirm("Are you sure you want to delete this design?")
-                    ) {
-                      deleteDesign(contextMenu.designId);
-                    }
-                    closeContextMenu();
-                  }}
-                  title="Delete Design"
-                >
-                  <Trash2 size={16} />
-                </button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        className="flex items-center justify-center px-3 py-2 hover:bg-destructive hover:text-destructive-foreground transition-colors rounded-r-lg"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (
+                            confirm("Are you sure you want to delete this design?")
+                          ) {
+                            deleteDesign(contextMenu.designId);
+                          }
+                          closeContextMenu();
+                        }}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>Delete Design</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
             </div>
           </div>
@@ -1167,43 +1224,39 @@ const UXPilotFlowContent: React.FC = () => {
       )}
 
       {codeSidebar.design && (
-        <div className="fixed inset-y-0 right-0 w-[500px] bg-white/90 backdrop-blur-xl border-l border-white/30 shadow-2xl z-50 flex flex-col">
-          <div className="p-5 border-b border-gray-200/60 flex items-center justify-between bg-gradient-to-r from-gray-50/80 to-white/80 backdrop-blur-sm">
+        <div className="fixed inset-y-0 right-0 w-[500px] bg-background border-l shadow-2xl z-50 flex flex-col">
+          <div className="p-5 border-b flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <h3 className="font-bold text-gray-900 flex items-center gap-2">
-                <Code2 size={18} className="text-purple-600" />
+              <h3 className="font-bold flex items-center gap-2">
+                <Code2 size={18} className="text-primary" />
                 Source Code
               </h3>
-              <div className="flex items-center gap-1 bg-white/60 rounded-md p-1">
-                <button
-                  className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${
-                    codeSidebar.format === "react"
-                      ? "bg-blue-600 text-white shadow-sm"
-                      : "text-gray-700 hover:bg-white/80"
-                  }`}
+              <div className="flex items-center gap-1 bg-muted rounded-md p-1">
+                <Button
+                  variant={codeSidebar.format === "react" ? "default" : "ghost"}
+                  size="sm"
                   onClick={() =>
                     setCodeSidebar((v) => ({ ...v, format: "react" }))
                   }
+                  className="h-7 px-3"
                 >
                   React
-                </button>
-                <button
-                  className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${
-                    codeSidebar.format === "html"
-                      ? "bg-blue-600 text-white shadow-sm"
-                      : "text-gray-700 hover:bg-white/80"
-                  }`}
+                </Button>
+                <Button
+                  variant={codeSidebar.format === "html" ? "default" : "ghost"}
+                  size="sm"
                   onClick={() =>
                     setCodeSidebar((v) => ({ ...v, format: "html" }))
                   }
+                  className="h-7 px-3"
                 >
                   HTML
-                </button>
+                </Button>
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-md text-sm font-semibold hover:from-blue-700 hover:to-purple-700 transition-all shadow-sm flex items-center gap-2"
+              <Button
+                size="sm"
                 onClick={() =>
                   copyCode(
                     codeSidebar.format === "react"
@@ -1214,17 +1267,18 @@ const UXPilotFlowContent: React.FC = () => {
               >
                 <Copy size={14} />
                 Copy Code
-              </button>
-              <button
-                className="px-4 py-2 bg-gray-200/80 text-gray-700 rounded-md text-sm font-semibold hover:bg-gray-300/80 transition-all"
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={closeSourceSidebar}
               >
-                Close
-              </button>
+                <X size={14} />
+              </Button>
             </div>
           </div>
-          <div className="p-5 overflow-auto text-sm bg-gradient-to-br from-gray-50/50 to-white/50 flex-1">
-            <pre className="whitespace-pre-wrap break-words font-mono text-gray-800 bg-white/80 backdrop-blur-sm p-5 rounded-md border border-gray-200/60 shadow-sm">
+          <div className="p-5 overflow-auto text-sm flex-1">
+            <pre className="whitespace-pre-wrap break-words font-mono bg-muted p-5 rounded-md border">
               {codeSidebar.format === "react"
                 ? toReactTailwind(codeSidebar.design!.html)
                 : codeSidebar.design!.html}
@@ -1233,105 +1287,102 @@ const UXPilotFlowContent: React.FC = () => {
         </div>
       )}
 
-      {followUp && (
-        <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-white/90 backdrop-blur-xl w-full max-w-lg rounded-3xl shadow-2xl border border-white/30">
-            <div className="p-8">
-              <h3 className="text-2xl font-bold text-gray-900 mb-2 flex items-center gap-3">
-                <Sparkles className="text-purple-600" size={24} />
-                Update Design
-              </h3>
-              <p className="text-gray-600 mb-6">
-                Describe what changes you&apos;d like to make
-              </p>
-              <textarea
-                value={followUp.prompt}
-                onChange={(e) =>
-                  setFollowUp({ ...followUp, prompt: e.target.value })
-                }
-                rows={5}
-                className="w-full border-2 border-gray-200/60 rounded-md p-4 focus:ring-2 focus:ring-purple-500 focus:border-purple-400 bg-white/70 backdrop-blur-sm transition-all"
-                placeholder="E.g., make the buttons bigger, change the color scheme to dark mode, add more spacing..."
-                disabled={isGenerating} // Disable during loading
-              />
-              <div className="flex justify-end gap-3 mt-8">
-                <button
-                  className="px-6 py-3 border-2 border-gray-200/60 rounded-md text-gray-700 hover:bg-gray-50/80 transition-all font-semibold disabled:opacity-50"
-                  onClick={() => setFollowUp(null)}
-                  disabled={isGenerating}
-                >
-                  Cancel
-                </button>
-                <button
-                  className="px-6 py-3 rounded-md bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 transition-all font-semibold shadow-lg flex items-center gap-2 disabled:opacity-50"
-                  onClick={handleFollowUp}
-                  disabled={isGenerating || !followUp.prompt.trim()}
-                >
-                  {isGenerating ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                      Updating...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles size={16} />
-                      Update Design
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
+      <Dialog open={!!followUp} onOpenChange={() => setFollowUp(null)}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="text-primary" size={20} />
+              Update Design
+            </DialogTitle>
+            <p className="text-sm text-muted-foreground">
+              Describe what changes you&apos;d like to make to your design
+            </p>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <Textarea
+              value={followUp?.prompt || ""}
+              onChange={(e) =>
+                followUp && setFollowUp({ ...followUp, prompt: e.target.value })
+              }
+              rows={5}
+              placeholder="E.g., make the buttons bigger, change the color scheme to dark mode, add more spacing..."
+              disabled={isGenerating}
+            />
           </div>
-        </div>
-      )}
 
-      {historyView && (
-        <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-white/90 backdrop-blur-xl w-full max-w-2xl rounded-3xl shadow-2xl border border-white/30">
-            <div className="p-8">
-              <div className="flex items-center justify-between mb-8">
-                <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-                  <History className="text-blue-600" size={24} />
-                  Design History
-                </h3>
-                <button
-                  className="px-4 py-2 border-2 border-gray-200/60 rounded-md text-gray-700 hover:bg-gray-50/80 transition-all font-semibold"
-                  onClick={() => setHistoryView(null)}
-                >
-                  Close
-                </button>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setFollowUp(null)}
+              disabled={isGenerating}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleFollowUp}
+              disabled={isGenerating || !followUp?.prompt.trim()}
+            >
+              {isGenerating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Update Design
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!historyView} onOpenChange={() => setHistoryView(null)}>
+        <DialogContent className="sm:max-w-[700px] max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <History className="text-primary" size={20} />
+              Design History
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+            {(!historyView?.history || historyView.history.length === 0) && (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                  <History size={24} className="text-muted-foreground" />
+                </div>
+                <p className="font-medium">No history available</p>
+                <p className="text-sm text-muted-foreground">
+                  This design hasn&apos;t been updated yet.
+                </p>
               </div>
-              <div className="max-h-96 overflow-visible space-y-4 custom-scrollbar">
-                {(historyView.history || []).length === 0 && (
-                  <div className="text-center py-12 text-gray-500">
-                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <History size={24} className="text-gray-400" />
-                    </div>
-                    <p className="text-lg font-medium">No history available</p>
-                    <p className="text-sm">
-                      This design hasn&apos;t been updated yet.
-                    </p>
-                  </div>
-                )}
-                {(historyView.history || []).map((h, i) => (
-                  <div
-                    key={i}
-                    className="border-2 border-gray-200/60 rounded-md p-5 bg-white/60 backdrop-blur-sm hover:bg-white/80 transition-all"
-                  >
-                    <div className="text-xs text-gray-500 mb-3 flex items-center gap-2">
-                      <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                      {new Date(h.at).toLocaleString()}
-                    </div>
-                    <div className="text-sm text-gray-900 whitespace-pre-wrap leading-relaxed">
-                      {h.prompt}
-                    </div>
-                  </div>
-                ))}
+            )}
+            {historyView?.history?.map((h, i) => (
+              <div
+                key={i}
+                className="border rounded-lg p-4 bg-muted/30 hover:bg-muted/50 transition-colors"
+              >
+                <div className="text-xs text-muted-foreground mb-2 flex items-center gap-2">
+                  <div className="w-2 h-2 bg-primary rounded-full"></div>
+                  {new Date(h.at).toLocaleString()}
+                </div>
+                <div className="text-sm whitespace-pre-wrap leading-relaxed">
+                  {h.prompt}
+                </div>
               </div>
-            </div>
+            ))}
           </div>
-        </div>
-      )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setHistoryView(null)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
